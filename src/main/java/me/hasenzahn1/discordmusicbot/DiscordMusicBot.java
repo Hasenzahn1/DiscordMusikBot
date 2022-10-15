@@ -16,9 +16,7 @@ import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 
 public class DiscordMusicBot {
 
@@ -51,7 +49,7 @@ public class DiscordMusicBot {
         commandManager.addCommand(new LoopCommand());
 
         //Bot setup
-        JDABuilder jdaBuilder = JDABuilder.createDefault("ODkxNjIxOTczNDg5MjI5ODk0.YVBBrA.c3UDjrXFpRogz2a96xcwvyA3Awg");
+        JDABuilder jdaBuilder = JDABuilder.createDefault(getToken());
         jdaBuilder.setActivity(Activity.listening("/help"));
         jdaBuilder.addEventListeners(commandManager);
         jdaBuilder.enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.GUILD_MESSAGES);
@@ -65,6 +63,17 @@ public class DiscordMusicBot {
         playerManager = new PlayerManager();
 
         checkForShutDown();
+    }
+
+    public static String getToken(){
+        BufferedReader is = new BufferedReader(new InputStreamReader(DiscordMusicBot.class.getClassLoader().getResourceAsStream("token.txt")));
+        String token = "";
+        try {
+            token = is.readLine().strip();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return token;
     }
 
     public void shutDown(){
