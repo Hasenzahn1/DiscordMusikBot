@@ -14,16 +14,28 @@ public class AudioLoadResult implements AudioLoadResultHandler {
     private final MusicController controller;
     private final String uri;
     private final MessageChannelUnion channel;
+    private final boolean display;
+    private final int retryCount;
 
-    public AudioLoadResult(MusicController controller, String uri, MessageChannelUnion channel) {
+    public AudioLoadResult(MusicController controller, String uri, MessageChannelUnion channel, boolean display) {
         this.controller = controller;
         this.uri = uri;
         this.channel = channel;
+        this.display = display;
+        retryCount = 0;
+    }
+
+    public AudioLoadResult(MusicController controller, String uri, MessageChannelUnion channel, boolean display, int retryCount) {
+        this.controller = controller;
+        this.uri = uri;
+        this.channel = channel;
+        this.display = display;
+        this.retryCount = retryCount;
     }
 
     @Override
     public void trackLoaded(AudioTrack audioTrack) {
-        if(controller.getPlayer().getPlayingTrack() != null) channel.sendMessage("Enqueued **" + audioTrack.getInfo().title + "** by **" + audioTrack.getInfo().author + "**").queue();
+        if(controller.getPlayer().getPlayingTrack() != null && display) channel.sendMessage("Enqueued **" + audioTrack.getInfo().title + "** by **" + audioTrack.getInfo().author + "**").queue();
         controller.getQueue().addTrackToQueue(audioTrack);
         System.out.println("trackLoaded");
     }
@@ -31,11 +43,11 @@ public class AudioLoadResult implements AudioLoadResultHandler {
     @Override
     public void playlistLoaded(AudioPlaylist audioPlaylist) {
         Queue queue = controller.getQueue();
-        System.out.println("Playlist loaded");
+        System.out.println("playlist loaded");
 
         if(uri.startsWith("ytsearch: ")){
             AudioTrack track = audioPlaylist.getTracks().get(0);
-            if(controller.getPlayer().getPlayingTrack() != null) channel.sendMessage("Enqueued **" + track.getInfo().title + "** by **" + track.getInfo().author + "**").queue();
+            if(controller.getPlayer().getPlayingTrack() != null && display) channel.sendMessage("Enqueued **" + track.getInfo().title + "** by **" + track.getInfo().author + "**").queue();
             queue.addTrackToQueue(track);
             return;
         }
@@ -46,29 +58,37 @@ public class AudioLoadResult implements AudioLoadResultHandler {
             added++;
         }
 
-        EmbedBuilder builder = new EmbedBuilder()
-                .setColor(new Color(80, 135, 208))
-                .setTitle("Queue")
-                .setDescription("Added " + added + " track to the queue");
+        if(display) {
+            EmbedBuilder builder = new EmbedBuilder()
+                    .setColor(new Color(80, 135, 208))
+                    .setTitle("Queue")
+                    .setDescription("Added " + added + " track to the queue");
+            channel.sendMessageEmbeds(builder.build()).queue();
+        }
 
-        channel.sendMessageEmbeds(builder.build()).queue();
     }
 
     @Override
     public void noMatches() {
-        EmbedBuilder builder = new EmbedBuilder()
-                .setColor(Color.RED)
-                .setTitle("An Error Occurred")
-                .setDescription("Found no matches for Song with url: `" + uri + "`");
-        channel.sendMessageEmbeds(builder.build()).queue();
+        if(display) {
+            EmbedBuilder builder = new EmbedBuilder()
+                    .setColor(Color.RED)
+                    .setTitle("An Error Occurred")
+                    .setDescription("Found no matches for Song with url: `" + uri + "`");
+            channel.sendMessageEmbeds(builder.build()).queue();
+        }
     }
 
     @Override
     public void loadFailed(FriendlyException e) {
-        EmbedBuilder builder = new EmbedBuilder()
-                .setColor(Color.RED)
-                .setTitle("An Error Occurred")
-                .setDescription("Could not load song: ```" + e.getLocalizedMessage() + "```");
-        channel.sendMessageEmbeds(builder.build()).queue();
+        System.out.println("load failed");
+        if(retryCount < 3) new AudioLoadResult(controller, uri, channel, display, retryCount + 1);
+        if(display && retryCount == 3) {
+            EmbedBuilder builder = new EmbedBuilder()
+                    .setColor(Color.RED)
+                    .setTitle("An Error Occurred")
+                    .setDescription("Could not load song: ```" + e.getLocalizedMessage() + "``` after **" + retryCount + "** attempts");
+            channel.sendMessageEmbeds(builder.build()).queue();
+        }
     }
 }

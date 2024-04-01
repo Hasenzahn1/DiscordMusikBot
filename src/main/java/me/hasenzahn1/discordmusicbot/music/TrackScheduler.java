@@ -2,6 +2,7 @@ package me.hasenzahn1.discordmusicbot.music;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter;
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
@@ -103,5 +104,16 @@ public class TrackScheduler extends AudioEventAdapter {
             track.setPosition(0);
             player.playTrack(track.makeClone());
         }
+    }
+
+    @Override
+    public void onTrackException(AudioPlayer player, AudioTrack track, FriendlyException exception) {
+        System.out.println("Track Exception");
+        exception.printStackTrace();
+    }
+
+    @Override
+    public void onTrackStuck(AudioPlayer player, AudioTrack track, long thresholdMs) {
+        System.out.println("On Track Stuck");
     }
 }

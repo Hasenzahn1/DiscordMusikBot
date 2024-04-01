@@ -1,6 +1,5 @@
 package me.hasenzahn1.discordmusicbot.commands.music;
 
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import me.hasenzahn1.discordmusicbot.DiscordMusicBot;
 import me.hasenzahn1.discordmusicbot.commandsystem.Command;
@@ -16,7 +15,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 
-import javax.tools.Diagnostic;
 import java.awt.*;
 import java.util.List;
 
@@ -34,7 +32,7 @@ public class QueueCommand extends Command {
     public MessageEmbed getQueueList(long guildId){
         MusicController controller = DiscordMusicBot.INSTANCE.getPlayerManager().getController(guildId);
         Queue queue = controller.getQueue();
-        if(queue.getQueuelist().size() == 0){
+        if(queue.getQueuelist().isEmpty()){
             return new EmbedBuilder().setColor(Color.RED).setDescription("Empty Queue").build();
         }
 

@@ -26,7 +26,7 @@ public class MusicController {
 
         this.guild.getAudioManager().setSendingHandler(new AudioPlayerSendHandler(player));
         player.addListener(new TrackScheduler());
-        player.setVolume(100);
+        player.setVolume(30);
 
         queue = new Queue(this);
         looping = false;
@@ -84,6 +84,7 @@ public class MusicController {
         stopDisconnectCheck();
         queue.clear();
         player.stopTrack();
+        System.out.println("disconnect");
         guild.getAudioManager().closeAudioConnection();
         looping = false;
     }

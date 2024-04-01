@@ -1,6 +1,5 @@
 package me.hasenzahn1.discordmusicbot;
 
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
@@ -9,18 +8,28 @@ import me.hasenzahn1.discordmusicbot.commands.PingCommand;
 import me.hasenzahn1.discordmusicbot.commands.music.*;
 import me.hasenzahn1.discordmusicbot.commandsystem.CommandManager;
 import me.hasenzahn1.discordmusicbot.music.PlayerManager;
-import me.hasenzahn1.discordmusicbot.music.Queue;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import org.apache.hc.core5.http.ParseException;
+import se.michaelthelin.spotify.SpotifyApi;
+import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.model_objects.credentials.ClientCredentials;
+import se.michaelthelin.spotify.requests.authorization.client_credentials.ClientCredentialsRequest;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 
 public class DiscordMusicBot {
 
     public static DiscordMusicBot INSTANCE;
+
+    //CREDS
+    private String[] credentials;
 
     private final JDA jda;
     private final String prefix;
@@ -30,9 +39,14 @@ public class DiscordMusicBot {
     private final AudioPlayerManager audioPlayerManager;
     private final PlayerManager playerManager;
 
+    private SpotifyApi spotifyApi;
+
     public DiscordMusicBot(){
         INSTANCE = this;
         prefix = "!";
+
+        //Credentials
+        getCredentials();
 
         //Commands
         commandManager = new CommandManager(prefix);
@@ -49,12 +63,11 @@ public class DiscordMusicBot {
         commandManager.addCommand(new LoopCommand());
 
         //Bot setup
-        JDABuilder jdaBuilder = JDABuilder.createDefault(getToken());
+        JDABuilder jdaBuilder = JDABuilder.createDefault(credentials[0]);
         jdaBuilder.setActivity(Activity.listening("/help"));
         jdaBuilder.addEventListeners(commandManager);
         jdaBuilder.enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.DIRECT_MESSAGES, GatewayIntent.GUILD_MESSAGES);
         jda = jdaBuilder.build();
-
 
         //AudioManager | PlayerManager
         audioPlayerManager = new DefaultAudioPlayerManager();
@@ -62,25 +75,41 @@ public class DiscordMusicBot {
         audioPlayerManager.getConfiguration().setFilterHotSwapEnabled(true);
         playerManager = new PlayerManager();
 
+        //Spotify Api
+        initializeSpotifyAPI();
+        //refreshCredentials();
+
         checkForShutDown();
     }
 
-    public static String getToken(){
+
+
+    private void getCredentials(){
         BufferedReader is = new BufferedReader(new InputStreamReader(DiscordMusicBot.class.getClassLoader().getResourceAsStream("token.txt")));
-        String token = "";
-        try {
-            token = is.readLine().strip();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return token;
+        Object[] creds = is.lines()
+                .map(String::strip)
+                .toArray();
+        credentials = Arrays.asList(creds).toArray(new String[creds.length]);
     }
 
-    public void shutDown(){
+    public void refreshCredentials(){
+        ClientCredentialsRequest.Builder builder = new ClientCredentialsRequest.Builder(spotifyApi.getClientId(), spotifyApi.getClientSecret());
+        try {
+            ClientCredentials creds = builder.grant_type("client_credentials").build().execute();
+            spotifyApi.setAccessToken(creds.getAccessToken());
+        } catch (IOException | ParseException | SpotifyWebApiException e) {
+            e.printStackTrace();
+        }
+    }
 
+    private void initializeSpotifyAPI(){
+        spotifyApi = new SpotifyApi.Builder().setClientId(credentials[1]).setClientSecret(credentials[2]).build();
+    }
+
+
+    public void shutDown(){
         jda.getPresence().setStatus(OnlineStatus.OFFLINE);
         jda.shutdown();
-
     }
 
     private void checkForShutDown(){
@@ -116,5 +145,9 @@ public class DiscordMusicBot {
 
     public CommandManager getCommandManager() {
         return commandManager;
+    }
+
+    public SpotifyApi getSpotifyApi() {
+        return spotifyApi;
     }
 }
